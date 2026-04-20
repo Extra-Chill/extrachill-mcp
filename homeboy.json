@@ -1,0 +1,24 @@
+{
+	"name": "extrachill-mcp",
+	"type": "wordpress-plugin",
+	"version_files": [
+		"extrachill-mcp.php"
+	],
+	"build": {
+		"composer_install": {
+			"args": "--no-dev --optimize-autoloader"
+		}
+	},
+	"deploy": {
+		"target": "wp-content/plugins/extrachill-mcp",
+		"exclude": [
+			".git",
+			".github",
+			"tests",
+			"node_modules",
+			".phpunit.result.cache",
+			"phpunit.xml.dist",
+			"phpcs.xml.dist"
+		]
+	}
+}
