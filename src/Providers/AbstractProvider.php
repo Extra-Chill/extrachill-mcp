@@ -102,9 +102,15 @@ abstract class AbstractProvider {
 								'idempotent' => true,
 							),
 							'mcp'          => array(
-								// Abilities become individually reachable via mcp-adapter's
-								// default server too, not just our load-provider meta-tool.
-								'public' => true,
+								// Keep provider tools off mcp-adapter's default server.
+								// Reaching them is the job of the load-provider /
+								// execute-tool meta-tools, which is the whole point of
+								// the pattern. This flag governs the default server
+								// only: McpComponentRegistry::register_ability_tool()
+								// registers whatever ability names a server is handed
+								// without consulting exposure, so our own server is
+								// unaffected.
+								'public' => false,
 							),
 						),
 					)

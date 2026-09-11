@@ -99,7 +99,8 @@ final class MetaTools {
 						'readonly'   => true,
 						'idempotent' => true,
 					),
-					'mcp'          => array( 'public' => true ),
+					// Off the adapter's default server; reached via our own server only.
+					'mcp'          => array( 'public' => false ),
 				),
 			)
 		);
@@ -146,7 +147,8 @@ final class MetaTools {
 						'readonly'   => true,
 						'idempotent' => true,
 					),
-					'mcp'          => array( 'public' => true ),
+					// Off the adapter's default server; reached via our own server only.
+					'mcp'          => array( 'public' => false ),
 				),
 			)
 		);

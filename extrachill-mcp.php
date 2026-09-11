@@ -32,6 +32,27 @@ if ( file_exists( $autoload ) ) {
 	require_once $autoload;
 }
 
+/*
+ * Suppress mcp-adapter's default server.
+ *
+ * The adapter ships a default server at /wp-json/mcp/mcp-adapter-default-server
+ * exposing three generic tools — discover-abilities, get-ability-info, and
+ * execute-ability — over every ability whose effective exposure resolves true
+ * (`meta.mcp.public`, falling back to `meta.public`). That is a second,
+ * unmediated MCP surface with a generic ability executor on it.
+ *
+ * Extra Chill's MCP surface is deliberately mediated through the two
+ * meta-tools (load-provider / execute-tool) on our own server, so the default
+ * server is off. Re-enable at a later priority if you genuinely want it.
+ *
+ * Registered at file scope, not on `plugins_loaded`: the adapter builds the
+ * default server during `McpAdapter::instance()`, which runs inline from the
+ * `require_once` below. A filter added inside a `plugins_loaded` callback
+ * would land after that decision — and later still if a standalone adapter
+ * plugin booted first.
+ */
+add_filter( 'mcp_adapter_create_default_server', '__return_false' );
+
 // PSR-4 autoload for src/ (fallback if composer not installed during dev).
 spl_autoload_register(
 	static function ( string $class ): void {
