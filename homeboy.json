@@ -1,24 +1,14 @@
 {
-	"name": "extrachill-mcp",
-	"type": "wordpress-plugin",
-	"version_files": [
-		"extrachill-mcp.php"
-	],
-	"build": {
-		"composer_install": {
-			"args": "--no-dev --optimize-autoloader"
-		}
+	"auto_cleanup": false,
+	"extensions": {
+		"wordpress": {}
 	},
-	"deploy": {
-		"target": "wp-content/plugins/extrachill-mcp",
-		"exclude": [
-			".git",
-			".github",
-			"tests",
-			"node_modules",
-			".phpunit.result.cache",
-			"phpunit.xml.dist",
-			"phpcs.xml.dist"
-		]
-	}
+	"id": "extrachill-mcp",
+	"remote_path": "wp-content/plugins/extrachill-mcp",
+	"version_targets": [
+		{
+			"file": "extrachill-mcp.php",
+			"pattern": "Version:\\s*([0-9.]+)"
+		}
+	]
 }
