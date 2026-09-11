@@ -99,6 +99,19 @@ add_action(
 			return;
 		}
 
+		// Agents API owns the two meta-abilities this server advertises. Without
+		// it there is nothing to expose, so fail loudly rather than serving an
+		// MCP endpoint with no tools on it.
+		if ( ! defined( 'AGENTS_API_LOADED' ) ) {
+			add_action(
+				'admin_notices',
+				static function (): void {
+					echo '<div class="notice notice-error"><p><strong>Extra Chill MCP</strong> requires the <strong>Agents API</strong> plugin, which provides the <code>agents/ability-search</code> and <code>agents/ability-call</code> abilities.</p></div>';
+				}
+			);
+			return;
+		}
+
 		Plugin::boot();
 	},
 	20

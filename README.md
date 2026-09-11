@@ -1,119 +1,68 @@
 # extrachill-mcp
 
-MCP context server for the Extra Chill platform — provides AI agents with access to the Extra Chill multisite network and Extra-Chill GitHub org via the `load-provider` / `execute-tool` meta-tool pattern.
+MCP server for the Extra Chill platform. Exposes the WordPress ability surface to external AI clients — ChatGPT, Gemini, Claude — scoped to the permissions of the connected account.
 
-Inspired by [`Automattic/mcp-context-wporg`](https://github.com/Automattic/mcp-context-wporg). Built as a PHP plugin on the WordPress [`mcp-adapter`](https://github.com/WordPress/mcp-adapter).
+**Status:** transport complete, authentication pending. See "Authentication" below.
 
-**Status:** Phase 0 scaffold. `editorial` provider fully implemented; other providers stubbed with tool schemas declared.
+## What this plugin is
 
-## What it is
+A transport adapter. It owns no tools, no domain logic, and no data access of its own.
 
-One uniform surface exposing everything relevant to Extra Chill through a consistent MCP interface:
-
-- **editorial** — posts, authors, tags, categories on extrachill.com
-- **wire** — news wire aggregation (wire.extrachill.com)
-- **docs** — documentation hub (docs.extrachill.com)
-- **artists** — artist profiles + link pages (artist.extrachill.com)
-- **events** — shows, festivals, venues (events.extrachill.com)
-- **community** — forums (community.extrachill.com)
-- **shop** — shop.extrachill.com products
-- **github** — Extra-Chill GitHub org (issues, PRs, releases)
-
-## Architecture
-
-Two meta-tools form the entire MCP surface. Everything else is reached by dispatch:
+Extra Chill registers abilities across its feature plugins — editorial, artists, events, venues and bookings, community, shop, newsletter. The Agents API substrate already provides two canonical meta-abilities over that registry:
 
 ```
-extrachill-mcp/load-provider    Load a provider and return its tool catalog
-extrachill-mcp/execute-tool     Execute a tool within a loaded provider
+agents/ability-search    Search registered abilities by name, category, keywords
+agents/ability-call      Invoke a registered ability by name with JSON parameters
 ```
 
-This pattern (borrowed from `mcp-context-wporg`) keeps the client's context window lean no matter how many providers or tools we add.
-
-Each provider follows a consistent tool shape:
+This plugin advertises exactly those two as MCP tools and stops there.
 
 ```
-search-{resource}    Search/filter
-get-{resource}       Get one
-get-timeline         Recent activity feed
-list-{taxonomy}      Discovery helper
+/wp-json/extrachill-mcp/v1/mcp
 ```
 
-## Endpoint
+Two tools, regardless of how many abilities exist. Adding a capability to the platform means registering an ability in the plugin that owns that domain — this server needs no change to expose it.
 
-Once installed on a site, the MCP server is available at:
+## Why only two tools
 
-```
-https://<site>/wp-json/extrachill-mcp/v1/mcp
-```
+Flat tool lists do not survive contact with a real ability registry. Extra Chill has several hundred registered abilities; advertising them individually would blow out the context window of every client that connected, and would grow worse with each feature shipped.
 
-## Usage
+Search-then-call keeps the advertised surface constant. It is the same shape as `mcp-context-wporg`'s `load-provider` / `execute-tool`, except the registry being searched is the WordPress Abilities API rather than a hand-maintained provider catalog.
 
-### With Claude Desktop (HTTP via mcp-wordpress-remote proxy)
+## Authorization
 
-```json
-{
-  "mcpServers": {
-    "extrachill": {
-      "command": "npx",
-      "args": ["-y", "@automattic/mcp-wordpress-remote@latest"],
-      "env": {
-        "WP_API_URL": "https://extrachill.com/wp-json/extrachill-mcp/v1/mcp",
-        "WP_API_USERNAME": "your-wp-username",
-        "WP_API_PASSWORD": "your-application-password"
-      }
-    }
-  }
-}
-```
+**Exposure is not authorization.** The two gates are independent and it matters that they stay that way.
 
-### With Claude Code / WP-CLI (STDIO)
+`WP_Ability::execute()` calls `check_permissions( $input )` on the target ability before running it, in WordPress core. Every route to an ability — REST, WP-CLI, MCP, `agents/ability-call` — passes through that check. `agents/ability-call` therefore cannot reach anything the caller could not already reach by other means.
 
-```bash
-wp mcp-adapter serve --server=extrachill-mcp --user=admin
-```
+This holds for input-dependent authorization too. Venue booking abilities resolve `booking_id` to a venue, then check that venue's grant for the requested action, per call. A connected account sees its own venues and nothing else, with no MCP-specific policy involved.
 
-## Providers
+`src/Access.php` widens the two meta-abilities from their upstream `manage_options` default to the Extra Chill team tier (`access_roadie`), filterable via `extrachill_mcp_capability`. That gate governs **reachability of the two meta-tools**, not what they may do.
 
-| Provider | Status | Description |
-|----------|--------|-------------|
-| editorial | Working | Posts, authors, tags, categories on extrachill.com |
-| wire | Stubbed (Phase 1) | News wire items |
-| docs | Stubbed (Phase 1) | Documentation hub |
-| artists | Stubbed (Phase 1) | Artist profiles + link pages |
-| events | Stubbed (Phase 1) | Shows, festivals, venues |
-| community | Stubbed (Phase 1) | Forums |
-| shop | Stubbed (Phase 1) | Products |
-| github | Stubbed (Phase 1) | Extra-Chill/* GitHub org |
+Note what widening it does expose: a caller who can reach `agents/ability-search` can enumerate every registered ability name and JSON schema on the network, whether or not any of them are executable for that caller. Opening this below team tier is a deliberate product decision about information disclosure.
 
-## Development
+## Authentication
 
-```bash
-# Install dependencies
-composer install
+**Not yet implemented — the plugin is not usable by external clients until it is.**
 
-# Run linter
-composer run phpcs
+Per-user connection requires OAuth 2.1: ChatGPT rejects bearer tokens outright, and Claude's static-header mode is an organization-shared credential rather than a per-user one. Without it there is no "connected account" for authorization to scope to.
 
-# Run tests
-composer run phpunit
-```
+Until that lands, the endpoint is reachable only by an already-authenticated WordPress session with the required capability.
 
 ## Requirements
 
+- WordPress 6.9+ (Abilities API in core)
+- Agents API plugin — provides `agents/ability-search` and `agents/ability-call`
 - PHP 8.1+
-- WordPress 6.9+ (for core Abilities API)
-- [`wordpress/mcp-adapter`](https://github.com/WordPress/mcp-adapter) (installed via composer)
+- `wordpress/mcp-adapter` ^0.6.1 (Composer)
 
-## Roadmap
+## Notes
 
-- **Phase 0 (current)** — Plugin scaffold, meta-tools, registry, editorial reference implementation, other providers stubbed
-- **Phase 1** — All 8 providers fully implemented; cache layer; `GITHUB_TOKEN` support for the github provider
-- **Phase 1.5** — Bearer token auth for write tools (post-reply, submit-event, update-profile)
-- **Phase 2** — Roadie consumes this server as its primary MCP client
-- **Phase 3** — Private providers (analytics, sendy, mediavine, gdrive) gated behind auth
-- **Phase 4** — External enrichment (spotify, bandcamp, setlist.fm) naturally extending the artist platform
+The adapter ships a default server at `/wp-json/mcp/mcp-adapter-default-server` carrying generic `discover-abilities` / `get-ability-info` / `execute-ability` tools, exposed by a static `meta.mcp.public` flag rather than by caller identity. This plugin suppresses it — Extra Chill's surface is mediated through one endpoint with one access policy.
 
-## License
+## Filters
 
-GPL-2.0-or-later
+| Filter | Purpose |
+| --- | --- |
+| `extrachill_mcp_capability` | Capability required to reach the meta-tools. Default `access_roadie`. |
+| `extrachill_mcp_tools` | Ability names advertised as MCP tools. Default: search + call. |

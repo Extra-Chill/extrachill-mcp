@@ -9,8 +9,6 @@ declare( strict_types = 1 );
 
 namespace ExtraChillMcp\Server;
 
-use ExtraChillMcp\Registry\ProviderRegistry;
-
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -18,15 +16,24 @@ defined( 'ABSPATH' ) || exit;
  *
  * Public endpoint: /wp-json/extrachill-mcp/v1/mcp
  *
- * Exposes exactly two meta-tools (load-provider, execute-tool) as the MCP
- * surface. Provider tools are reached through execute-tool rather than being
- * advertised individually, so the tool count stays flat as providers grow.
- * Opt into flat advertising with the `extrachill_mcp_advertise_flat_tools`
- * filter.
+ * The server advertises exactly two tools, both owned by the Agents API
+ * substrate: `agents/ability-search` for discovery and `agents/ability-call`
+ * for dispatch. Every other capability on the network is reached through those
+ * two, so the advertised tool count stays at two no matter how large the
+ * ability registry grows.
+ *
+ * This plugin deliberately owns no tool implementations. Domain behavior lives
+ * in the feature plugin that registers the ability; this is transport.
  */
 final class McpServer {
 
-	public function __construct( private ProviderRegistry $registry ) {}
+	/**
+	 * Canonical Agents API meta-abilities.
+	 */
+	private const TOOLS = array(
+		'agents/ability-search',
+		'agents/ability-call',
+	);
 
 	public function register(): void {
 		add_action( 'mcp_adapter_init', array( $this, 'on_mcp_adapter_init' ) );
@@ -36,44 +43,29 @@ final class McpServer {
 	 * @param \WP\MCP\Core\McpAdapter $adapter
 	 */
 	public function on_mcp_adapter_init( $adapter ): void {
-		// The meta-tools are the entire advertised surface. Two tools, regardless
-		// of how many providers exist — that is the point of the pattern.
-		$abilities = array(
-			'extrachill-mcp/load-provider',
-			'extrachill-mcp/execute-tool',
-		);
-
 		/**
-		 * Filters whether every provider tool is also advertised as a flat tool.
+		 * Filters the tools advertised on the Extra Chill MCP server.
 		 *
-		 * Off by default. Enabling it advertises 2 + N tools instead of 2, which
-		 * grows without bound as providers are implemented and reintroduces the
-		 * context bloat the meta-tool pattern exists to avoid. Useful only for a
-		 * client that cannot do the two-step load-provider / execute-tool dance.
+		 * Adding entries here re-introduces flat tool growth, which the
+		 * search/call indirection exists to avoid. Prefer registering a
+		 * WordPress ability — it becomes reachable through `agents/ability-call`
+		 * with no change to this server.
 		 *
-		 * Provider tools remain fully reachable via execute-tool either way.
-		 *
-		 * @param bool $flat Whether to advertise provider tools individually.
+		 * @param string[] $tools Ability names advertised as MCP tools.
 		 */
-		if ( apply_filters( 'extrachill_mcp_advertise_flat_tools', false ) ) {
-			foreach ( $this->registry->all() as $provider ) {
-				foreach ( array_keys( $provider->tools() ) as $tool_name ) {
-					$abilities[] = 'extrachill-mcp/' . $provider->slug() . '-' . $tool_name;
-				}
-			}
-		}
+		$tools = apply_filters( 'extrachill_mcp_tools', self::TOOLS );
 
 		$adapter->create_server(
 			'extrachill-mcp',
 			'extrachill-mcp/v1',
 			'mcp',
-			__( 'Extra Chill MCP', 'extrachill-mcp' ),
-			__( 'MCP context server for the Extra Chill platform — music publication, artists, events, community, shop, and the Extra-Chill GitHub org.', 'extrachill-mcp' ),
+			__( 'Extra Chill', 'extrachill-mcp' ),
+			__( 'Search and invoke Extra Chill platform abilities — editorial, artists, events, venues and bookings, community, shop, and newsletter. Start with ability-search to discover what is available, then ability-call to run it. Every call is authorized against the connected account.', 'extrachill-mcp' ),
 			EXTRACHILL_MCP_VERSION,
 			array( \WP\MCP\Transport\HttpTransport::class ),
 			\WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
 			\WP\MCP\Infrastructure\Observability\NullMcpObservabilityHandler::class,
-			$abilities,
+			is_array( $tools ) ? array_values( $tools ) : self::TOOLS,
 			array(), // resources
 			array()  // prompts
 		);
