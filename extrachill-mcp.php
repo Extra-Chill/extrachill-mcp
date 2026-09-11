@@ -60,6 +60,14 @@ add_action(
 			return;
 		}
 
+		// Boot the composer-bundled mcp-adapter unless a standalone copy is active.
+		if ( ! defined( 'WP_MCP_VERSION' ) ) {
+			$adapter_main = EXTRACHILL_MCP_DIR . 'vendor/wordpress/mcp-adapter/mcp-adapter.php';
+			if ( file_exists( $adapter_main ) ) {
+				require_once $adapter_main;
+			}
+		}
+
 		if ( ! class_exists( \WP\MCP\Core\McpAdapter::class ) ) {
 			add_action(
 				'admin_notices',
