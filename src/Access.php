@@ -69,6 +69,6 @@ final class Access {
 		 */
 		$capability = apply_filters( 'extrachill_mcp_capability', self::DEFAULT_CAPABILITY, $input );
 
-		return is_string( $capability ) && '' !== $capability && current_user_can( $capability );
+		return '' !== $capability && current_user_can( $capability );
 	}
 }

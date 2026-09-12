@@ -65,7 +65,7 @@ final class McpServer {
 			array( \WP\MCP\Transport\HttpTransport::class ),
 			\WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
 			\WP\MCP\Infrastructure\Observability\NullMcpObservabilityHandler::class,
-			is_array( $tools ) ? array_values( $tools ) : self::TOOLS,
+			array_values( $tools ),
 			array(), // resources
 			array()  // prompts
 		);
