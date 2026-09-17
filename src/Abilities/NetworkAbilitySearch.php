@@ -146,15 +146,12 @@ final class NetworkAbilitySearch {
 				continue;
 			}
 
-			/*
-			 * is_array() alone narrows to array<mixed>, which widens the
-			 * by-ref parameter's declared element type. Entries are the
-			 * string-keyed ability records agents/ability-search returns, so
-			 * state that rather than loosening the contract to match the
-			 * weaker inference.
-			 *
-			 * @var array<string,mixed> $record
-			 */
+			// is_array() alone narrows to array<mixed>, which widens the
+			// by-ref parameter's declared element type. Entries are the
+			// string-keyed ability records agents/ability-search returns, so
+			// state that rather than loosening the declared contract to match
+			// the weaker inference.
+			/** @var array<string,mixed> $record */
 			$record         = $entry;
 			$record['site'] = $site_key;
 			$abilities[]    = $record;
