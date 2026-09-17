@@ -57,6 +57,19 @@ final class NetworkStub {
 			return;
 		}
 
+		/*
+		 * These are GLOBAL function declarations that happen to be written
+		 * inside a static method body. A nested named function does not
+		 * inherit class scope, so `self::` here is not a style preference —
+		 * it is a fatal:
+		 *
+		 *   PHP Fatal error: Cannot use "self" when no class scope is active
+		 *
+		 * The sniff cannot see that distinction, and its autofix would break
+		 * the stub at runtime. Disabled for this block only, re-enabled
+		 * immediately after.
+		 */
+		// phpcs:disable Squiz.Classes.SelfMemberReference.NotUsed
 		function ec_get_blog_ids(): array {
 			return NetworkStub::$blog_ids;
 		}
@@ -84,6 +97,7 @@ final class NetworkStub {
 
 			return ( NetworkStub::$cross_site_handler )( $site_key, $method, $path, $args );
 		}
+		// phpcs:enable Squiz.Classes.SelfMemberReference.NotUsed
 	}
 
 	/**

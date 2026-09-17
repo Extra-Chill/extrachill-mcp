@@ -92,6 +92,7 @@ final class NetworkAbilitySearch {
 			'limit'    => $limit,
 		);
 
+		/** @var array<int,array<string,mixed>> $abilities Declared so the by-ref merge below type-checks. */
 		$abilities     = array();
 		$sites_queried = array();
 		$errors        = array();

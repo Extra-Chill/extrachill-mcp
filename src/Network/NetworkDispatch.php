@@ -66,7 +66,14 @@ final class NetworkDispatch {
 		}
 
 		$current_blog_id = (int) get_current_blog_id();
-		$remote           = array();
+		$remote          = array();
+
+		// self::available() already proved this exists, but static analysis
+		// cannot follow that indirection. Re-checking inline keeps the type
+		// honest without weakening the guard.
+		if ( ! function_exists( 'ec_get_blog_ids' ) ) {
+			return array();
+		}
 
 		foreach ( ec_get_blog_ids() as $site_key => $blog_id ) {
 			if ( (int) $blog_id === $current_blog_id ) {
