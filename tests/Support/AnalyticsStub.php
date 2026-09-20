@@ -76,26 +76,3 @@ final class AnalyticsStub {
 		self::$throws    = false;
 	}
 }
-
-/**
- * The object `wp_get_ability()` hands back.
- */
-final class FakeAnalyticsAbility {
-
-	/**
-	 * @param array<string,mixed> $input Ability input.
-	 * @return int
-	 */
-	public function execute( array $input ): int {
-		if ( AnalyticsStub::$throws ) {
-			throw new \RuntimeException( 'analytics exploded' );
-		}
-
-		AnalyticsStub::$captured[] = array(
-			'event_type' => is_string( $input['event_type'] ?? null ) ? $input['event_type'] : '',
-			'event_data' => is_array( $input['event_data'] ?? null ) ? $input['event_data'] : array(),
-		);
-
-		return count( AnalyticsStub::$captured );
-	}
-}
