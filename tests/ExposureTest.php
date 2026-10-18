@@ -155,4 +155,30 @@ class ExposureTest extends WP_UnitTestCase {
 			);
 		}
 	}
+
+	public function test_substrate_call_filter_only_widens_for_exposed_abilities(): void {
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		get_user_by( 'id', $user_id )->add_cap( 'access_studio' );
+		wp_set_current_user( $user_id );
+
+		$access = new \ExtraChillMcp\Access();
+
+		// agents/ability-call is REST-visible, so the substrate filter is a
+		// second route in; it must not reach internal primitives.
+		$this->assertFalse( $access->filter_substrate_call_permission( false, array( 'name' => self::HIDDEN ) ) );
+		$this->assertFalse( $access->filter_substrate_call_permission( false, array() ) );
+		$this->assertTrue( $access->filter_substrate_call_permission( false, array( 'name' => self::REST ) ) );
+		$this->assertTrue( $access->filter_substrate_call_permission( false, array( 'name' => self::MCP ) ) );
+		$this->assertTrue( $access->filter_substrate_call_permission( true, array( 'name' => self::HIDDEN ) ) );
+
+		wp_set_current_user( 0 );
+	}
+
+	public function test_substrate_call_filter_denies_non_team_even_for_exposed_abilities(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$this->assertFalse( ( new \ExtraChillMcp\Access() )->filter_substrate_call_permission( false, array( 'name' => self::REST ) ) );
+
+		wp_set_current_user( 0 );
+	}
 }
