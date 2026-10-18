@@ -152,10 +152,6 @@ final class NetworkDispatch {
 		$index  = ec_get_network_ability_owner_index();
 		$owners = $index[ $ability_name ] ?? array();
 
-		if ( ! is_array( $owners ) ) {
-			return array();
-		}
-
 		return array_map( 'strval', array_keys( $owners ) );
 	}
 
